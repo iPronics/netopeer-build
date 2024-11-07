@@ -1,2 +1,2 @@
-# netconf-deb
-Repo to automate builds of netopeer2 deb packages
+# netopeer-deb
+Repo to automate builds of the netopeer2 stack deb packages
