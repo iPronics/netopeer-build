@@ -49,22 +49,22 @@ jobs:
       - name: build libyang
         run: |
           cd ~/libyang && uv tool run apkg build 
-          apt install ~/libyang/pkg/pkgs/debian-12/libyang*/*.deb
+          apt-get install -y ~/libyang/pkg/pkgs/debian-12/libyang*/*.deb
 
       - name: build libnetconf2
         run: |
           cd ~/libnetconf2 && uv tool run apkg build 
-          apt install ~/libnetconf2/pkg/pkgs/debian-12/libnetconf*/*.deb
+          apt-get install -y ~/libnetconf2/pkg/pkgs/debian-12/libnetconf*/*.deb
 
       - name: build sysrepo
         run: |
           cd ~/sysrepo/ && uv tool run apkg build
-          apt install ~/sysrepo/pkg/pkgs/debian-12/sysrepo*/*deb
+          apt-get install -y ~/sysrepo/pkg/pkgs/debian-12/sysrepo*/*deb
 
       - name: build netopeer2
         run: |
           cd ~/Netopeer2 && uv tool run apkg build
-          apt install ~/Netopeer2/pkg/pkgs/debian-12/netopeer2*/*deb
+          apt-get install -y ~/Netopeer2/pkg/pkgs/debian-12/netopeer2*/*deb
 
       - name: collect all debs
         run: mkdir -p ~/debs && cp ~/*/pkg/pkgs/debian-12/*/* ~/debs/
