@@ -44,7 +44,7 @@ jobs:
           git clone --depth=1 https://github.com/sysrepo/sysrepo.git  
           git clone --depth=1 https://github.com/CESNET/Netopeer2.git 
           sed -i 's/-DCMAKE_BUILD_TYPE/-DENABLE_TLS=ON -DENABLE_SSH=ON -DCMAKE_BUILD_TYPE/g' \
-             /root/libnetconf2/distro/pkg/deb/rules
+             ~/libnetconf2/distro/pkg/deb/rules
 
       - name: build libyang
         run: |
@@ -67,13 +67,13 @@ jobs:
           apt install ~/Netopeer2/pkg/pkgs/debian-12/netopeer2*/*deb
 
       - name: collect all debs
-        run: mkdir -p /debs && cp ~/*/pkg/pkgs/debian-12/*/* /debs/
+        run: mkdir -p ~/debs && cp ~/*/pkg/pkgs/debian-12/*/* ~/debs/
 
       - name: upload debs as artifacts
         uses: actions/upload-artifact@v4
         with:
           name: debs
-          path: /debs/
+          path: ~/debs/
           retention-days: 7
 
       - name: Publish release
@@ -82,4 +82,4 @@ jobs:
         with:
           generateReleaseNotes: "true"
           assets: |
-            - path: /debs/*
+            - path: ~/debs/*
