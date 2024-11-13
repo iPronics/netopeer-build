@@ -72,7 +72,10 @@ jobs:
           mkdir -p ~/wheels && cd ~/wheels && uvx -p 3.11 pip wheel sysrepo
 
       - name: Collect all builds
-        run: mkdir -p ~/builds && cp ~/*/pkg/pkgs/debian-12/*/* ~/wheels/*.whl ~/builds/
+        run: |
+          mkdir -p ~/builds && cp ~/*/pkg/pkgs/debian-12/*/* ~/wheels/*.whl ~/builds/
+          # also include a tgz with everything
+          cd ~ && tar -cvzf ~/builds.tgz ~/builds/ && mv ~/builds.tgz ~/builds/
 
       - name: Upload builds as artifacts
         uses: actions/upload-artifact@v4
