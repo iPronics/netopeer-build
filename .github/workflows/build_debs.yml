@@ -129,8 +129,8 @@ jobs:
           codename: ${{ env.CODENAME }}
           components: ${{ env.COMPONENTS }}
           architectures: ${{ env.ARCHITECTURES }}
-          import-from-repo-url: |
-            deb-amd64 https://cpascual.github.io/${{ env.REPO_NAME }}/ ${{ env.CODENAME }} ${{ env.COMPONENTS }}
+          # import-from-repo-url: |
+          #   deb-amd64 https://cpascual.github.io/${{ env.REPO_NAME }}/ ${{ env.CODENAME }} ${{ env.COMPONENTS }}
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
