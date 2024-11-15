@@ -124,7 +124,7 @@ jobs:
       - uses: morph027/apt-repo-action@v2
         id: create-apt-repo
         with:
-          repo-name: ${{ env.CODENAME }}
+          repo-name: ${{ env.REPO_NAME }}
           signing-key: ${{ secrets.SIGNING_KEY }}
           codename: ${{ env.CODENAME }}
           components: ${{ env.COMPONENTS }}
