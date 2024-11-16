@@ -121,6 +121,10 @@ jobs:
           assets: |
             - path: ~/builds/*
 
+      - name: Copy debs to current dir
+        # workaround for scan-dir input of apt-repo-action not working
+        run: cp -v ~/builds/*.deb ./
+
       - uses: morph027/apt-repo-action@v2
         id: create-apt-repo
         with:
@@ -129,7 +133,6 @@ jobs:
           codename: ${{ env.CODENAME }}
           components: ${{ env.COMPONENTS }}
           architectures: ${{ env.ARCHITECTURES }}
-          scan-dir: ~/builds/
           # import-from-repo-url: |
           #   deb-amd64 https://cpascual.github.io/${{ env.REPO_NAME }}/ ${{ env.CODENAME }} ${{ env.COMPONENTS }}
 
