@@ -11,14 +11,13 @@ The deb packages are also published in an apt repo.
 You can add the repo with:
 
 ```console
-wget https://cpascual.github.io/netopeer-deb/gpg.key -O- | sudo tee /etc/apt/trusted.gpg.d/netopeer-deb.asc
-sudo add-apt-repository "deb [arch=amd64] https://cpascual.github.io/netopeer-deb/ bookworm main"
+wget https://cpascual.github.io/netopeer-deb/gpg.key -O- > /etc/apt/trusted.gpg.d/netopeer-deb.asc
+echo 'deb [arch=amd64] https://cpascual.github.io/netopeer-deb/ bookworm main' > /etc/apt/sources.list.d/netopeer-deb.list
 ```
 
 ...and then install packages with e.g.:
 
 ```console
-sudo addgroup sysrepo  # needed if not exists
 apt update
 apt install netopeer2 sysrepo-tools
 ```
