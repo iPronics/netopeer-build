@@ -1,5 +1,5 @@
 # :warning: THIS PROJECT HAS BEEN ARCHIVED
-**The development has been transferred to https://github.com/iPronics/netopeer-build/releases**
+**The development has been transferred to https://github.com/iPronics/netopeer-build**
 
 
 # netopeer-deb
