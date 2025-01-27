@@ -1,3 +1,7 @@
+# :warning: THIS PROJECT HAS BEEN ARCHIVED
+**The development has been transferred to https://github.com/iPronics/netopeer-build**
+
+
 # netopeer-deb
 Repo to automate builds of the netopeer2 stack deb packages.
 
