@@ -1,0 +1,164 @@
+name: build_arm
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - "*"
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+env:
+  REPO_NAME: netopeer-deb
+  CODENAME: bookworm
+  COMPONENTS: main
+  ARCHITECTURES: arm64
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04-arm
+    container:
+      image: ghcr.io/astral-sh/uv:bookworm-slim
+    outputs:
+      artifact_id: ${{ steps.upload-artifact.outputs.artifact-id }}
+      keyring: ${{ steps.create-apt-repo.outputs.keyring }}
+    steps:
+      - name: Install apkg
+        run: uv tool install apkg
+      - name: Install build deps
+        run: |
+          apt-get update && apt-get install -y --no-install-recommends \
+            git \
+            build-essential \
+            libcmocka-dev \
+            libpcre2-dev \
+            pkg-config \
+            cmake \
+            debhelper \
+            # libssl-dev \
+            # libssh-dev \
+            # libpam0g-dev \
+            # libcurl4-openssl-dev \
+            # libsystemd-dev \
+            valgrind \
+            libsystemd-dev \
+            systemd \
+            # graphviz \
+            # clang # for sysrepo
+
+      - name: download sources
+        run: |
+          git config --global http.sslVerify false 
+          cd ~
+          git clone --depth=1 https://github.com/CESNET/libyang  
+          # git clone --depth=1 https://github.com/CESNET/libnetconf2.git  
+          # git clone --depth=1 https://github.com/sysrepo/sysrepo.git  
+          # git clone --depth=1 https://github.com/CESNET/Netopeer2.git 
+          # sed -i 's/-DCMAKE_BUILD_TYPE/-DENABLE_TLS=ON -DENABLE_SSH=ON -DCMAKE_BUILD_TYPE/g' \
+          #   ~/libnetconf2/distro/pkg/deb/rules
+
+      - name: build libyang
+        run: |
+          cd ~/libyang && uv tool run apkg build 
+          apt-get install -y ~/libyang/pkg/pkgs/debian-12/libyang*/*.deb
+
+      # - name: build libnetconf2
+      #   run: |
+      #     cd ~/libnetconf2 && uv tool run apkg build
+      #     apt-get install -y ~/libnetconf2/pkg/pkgs/debian-12/libnetconf*/*.deb
+
+      # - name: build sysrepo
+      #   run: |
+      #     cd ~/sysrepo/ && uv tool run apkg build
+      #     apt-get install -y ~/sysrepo/pkg/pkgs/debian-12/sysrepo*/*.deb
+
+      # - name: build netopeer2
+      #   run: |
+      #     cd ~/Netopeer2 && uv tool run apkg build
+      #     apt-get install -y ~/Netopeer2/pkg/pkgs/debian-12/netopeer2*/*.deb
+
+      - name: build libyang and sysrepo wheels
+        run: |
+          mkdir -p ~/wheels && cd ~/wheels && uvx -p 3.11 pip wheel libyang
+
+      - name: Collect all builds
+        run: |
+          mkdir -p ~/builds && cp ~/*/pkg/pkgs/debian-12/*/* ~/wheels/*.whl ~/builds/
+          # also include a tgz with everything
+          cd ~ && tar -cvzf ~/builds.tgz builds/ && mv ~/builds.tgz ~/builds/
+
+      - name: Upload builds as artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: builds
+          path: ~/builds/
+          retention-days: 7
+
+  release:
+    if: github.ref_type == 'tag'
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      - name: Download builds artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: builds
+          path: ~/builds/
+
+      - name: Publish release
+        uses: ghalactic/github-release-from-tag@v5
+        with:
+          generateReleaseNotes: "true"
+          assets: |
+            - path: ~/builds/*
+
+      - name: Copy debs to current dir
+        # workaround for scan-dir input of apt-repo-action not working
+        run: cp -v ~/builds/*.deb ./
+
+      # - uses: morph027/apt-repo-action@v2
+      #   id: create-apt-repo
+      #   with:
+      #     repo-name: ${{ env.REPO_NAME }}
+      #     signing-key: ${{ secrets.SIGNING_KEY }}
+      #     codename: ${{ env.CODENAME }}
+      #     components: ${{ env.COMPONENTS }}
+      #     architectures: ${{ env.ARCHITECTURES }}
+      #     # import-from-repo-url: |
+      #     #   deb-amd64 https://cpascual.github.io/${{ env.REPO_NAME }}/ ${{ env.CODENAME }} ${{ env.COMPONENTS }}
+
+      # - name: Upload Pages artifact
+      #   uses: actions/upload-pages-artifact@v3
+      #   with:
+      #     name: github-pages
+      #     path: ${{ steps.create-apt-repo.outputs.dir }}
+
+  deploy:
+    if: github.ref_type == 'tag'
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: release
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+      - name: Adding summary
+        run: |
+          echo ':rocket:' >> $GITHUB_STEP_SUMMARY
+          echo '' >> $GITHUB_STEP_SUMMARY
+          echo '```bash' >> $GITHUB_STEP_SUMMARY
+          echo 'curl -sfLo /etc/apt.trusted.gpg.d/${{ needs.build.outputs.keyring }}.asc ${{ steps.deploy-pages.outputs.page_url }}gpg.key' >> $GITHUB_STEP_SUMMARY
+          echo 'echo "deb ${{ steps.deploy-pages.outputs.page_url }} ${{ env.CODENAME }} ${{ env.COMPONENTS }}" >/etc/apt/sources.list.d/${{ env.REPO_NAME }}.list' >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
