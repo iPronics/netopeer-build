@@ -44,8 +44,8 @@ jobs:
             # libcurl4-openssl-dev \
             # libsystemd-dev \
             # valgrind \
-            libsystemd-dev \
-            systemd \
+            # libsystemd-dev \
+            # systemd \
             # graphviz \
             # clang # for sysrepo
 
