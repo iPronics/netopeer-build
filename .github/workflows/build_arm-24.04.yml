@@ -1,4 +1,4 @@
-name: build_arm
+name: build_arm_24.04
 on:
   push:
     branches:
