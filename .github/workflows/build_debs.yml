@@ -124,7 +124,7 @@ jobs:
         run: |
           git config --global http.sslVerify false 
           cd ~
-          git clone --depth=1 https://github.com/CESNET/libyang  
+          git clone https://github.com/CESNET/libyang  
 
       - name: build libyang
         run: |
