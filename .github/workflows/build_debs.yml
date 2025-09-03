@@ -54,10 +54,10 @@ jobs:
         run: |
           git config --global http.sslVerify false 
           cd ~
-          git clone --depth=1 https://github.com/CESNET/libyang  
-          git clone --depth=1 https://github.com/CESNET/libnetconf2.git  
-          git clone --depth=1 https://github.com/sysrepo/sysrepo.git  
-          git clone --depth=1 https://github.com/CESNET/Netopeer2.git 
+          git clone https://github.com/CESNET/libyang  
+          git clone https://github.com/CESNET/libnetconf2.git  
+          git clone https://github.com/sysrepo/sysrepo.git  
+          git clone https://github.com/CESNET/Netopeer2.git 
           sed -i 's/-DCMAKE_BUILD_TYPE/-DENABLE_TLS=ON -DENABLE_SSH=ON -DCMAKE_BUILD_TYPE/g' \
              ~/libnetconf2/distro/pkg/deb/rules
 
