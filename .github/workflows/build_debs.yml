@@ -17,7 +17,6 @@ env:
   CODENAME: bookworm
   COMPONENTS: main
   ARCHITECTURES: amd64 arm64
-  LIBYANG_VERSION: 3.13.5
 
 jobs:
   build-amd64:
@@ -64,7 +63,7 @@ jobs:
 
       - name: build libyang
         run: |
-          cd ~/libyang && uv tool run apkg build -v ${{ env.LIBYANG_VERSION }}
+          cd ~/libyang && uv tool run apkg build
           apt-get install -y ~/libyang/pkg/pkgs/debian-12/libyang*/*.deb
 
       - name: build libnetconf2
