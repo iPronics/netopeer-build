@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - main
+      - multiarch
     tags:
       - "*"
 
@@ -15,10 +16,10 @@ env:
   REPO_NAME: netopeer-deb
   CODENAME: bookworm
   COMPONENTS: main
-  ARCHITECTURES: amd64
+  ARCHITECTURES: amd64 arm64
 
 jobs:
-  build:
+  build-amd64:
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/astral-sh/uv:bookworm-slim
@@ -93,13 +94,62 @@ jobs:
       - name: Upload builds as artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: builds
+          name: builds-amd64
+          path: ~/builds/
+          retention-days: 7
+  
+  build-arm64:
+    runs-on: ubuntu-24.04-arm
+    container:
+      image: ghcr.io/astral-sh/uv:bookworm-slim
+    outputs:
+      artifact_id: ${{ steps.upload-artifact.outputs.artifact-id }}
+      keyring: ${{ steps.create-apt-repo.outputs.keyring }}
+    steps:
+      - name: Install apkg
+        run: uv tool install apkg
+      - name: Install build deps
+        run: |
+          apt-get update && apt-get install -y --no-install-recommends \
+            git \
+            build-essential \
+            libcmocka-dev \
+            libpcre2-dev \
+            pkg-config \
+            cmake \
+            debhelper
+
+
+      - name: download sources
+        run: |
+          git config --global http.sslVerify false 
+          cd ~
+          git clone --depth=1 https://github.com/CESNET/libyang  
+
+      - name: build libyang
+        run: |
+          cd ~/libyang && uv tool run apkg build 
+          apt-get install -y ~/libyang/pkg/pkgs/debian-12/libyang*/*.deb
+
+      - name: build libyang wheel
+        run: |
+          mkdir -p ~/wheels && cd ~/wheels && uvx -p 3.11 pip wheel libyang
+
+      - name: Collect all builds
+        run: |
+          mkdir -p ~/builds && cp ~/*/pkg/pkgs/debian-12/*/* ~/wheels/*.whl ~/builds/
+
+
+      - name: Upload builds as artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: builds-arm64
           path: ~/builds/
           retention-days: 7
 
   release:
     if: github.ref_type == 'tag'
-    needs: build
+    needs: [build-amd64, build-arm64]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -108,11 +158,17 @@ jobs:
       - name: Setup Pages
         uses: actions/configure-pages@v4
 
-      - name: Download builds artifact
+      - name: Download amd64 build artifacts
         uses: actions/download-artifact@v4
         with:
-          name: builds
-          path: ~/builds/
+          name: builds-amd64
+          path: ~/builds/amd64/
+
+      - name: Download arm64 build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: builds-arm64
+          path: ~/builds/arm64/
 
       - name: Publish release
         uses: ghalactic/github-release-from-tag@v5
@@ -123,7 +179,7 @@ jobs:
 
       - name: Copy debs to current dir
         # workaround for scan-dir input of apt-repo-action not working
-        run: cp -v ~/builds/*.deb ./
+        run: cp -v ~/builds/{amd64,arm64}/*.deb ./
 
       - uses: morph027/apt-repo-action@v2
         id: create-apt-repo
