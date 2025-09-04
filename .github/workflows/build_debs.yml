@@ -171,7 +171,11 @@ jobs:
 
       - name: Copy debs to current dir
         # workaround for scan-dir input of apt-repo-action not working
-        run: cp -v ~/artifacts/builds-*/*.deb ./
+        run: |
+          # note that debs may be overwriten if they have the same file name
+          # (e.g., platform independent debs)
+          cp -v ~/artifacts/builds-arm64/*.deb ./
+          cp -v ~/artifacts/builds-amd64/*.deb ./
 
       - uses: morph027/apt-repo-action@v2
         id: create-apt-repo
