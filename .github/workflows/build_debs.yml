@@ -177,7 +177,7 @@ jobs:
           cp -v ~/artifacts/builds-arm64/*.deb ./
           cp -v ~/artifacts/builds-amd64/*.deb ./
 
-      - uses: morph027/apt-repo-action@v2
+      - uses: morph027/apt-repo-action@v3.7
         id: create-apt-repo
         with:
           repo-name: ${{ env.REPO_NAME }}
