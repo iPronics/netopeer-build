@@ -97,7 +97,7 @@ jobs:
           name: builds-amd64
           path: ~/builds/
           retention-days: 7
-  
+
   build-arm64:
     runs-on: ubuntu-24.04-arm
     container:
@@ -119,12 +119,11 @@ jobs:
             cmake \
             debhelper
 
-
       - name: download sources
         run: |
           git config --global http.sslVerify false 
           cd ~
-          git clone https://github.com/CESNET/libyang  
+          git clone https://github.com/CESNET/libyang
 
       - name: build libyang
         run: |
@@ -138,7 +137,6 @@ jobs:
       - name: Collect all builds
         run: |
           mkdir -p ~/builds && cp ~/*/pkg/pkgs/debian-12/*/* ~/wheels/*.whl ~/builds/
-
 
       - name: Upload builds as artifacts
         uses: actions/upload-artifact@v4
