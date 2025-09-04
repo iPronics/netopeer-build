@@ -156,28 +156,22 @@ jobs:
       - name: Setup Pages
         uses: actions/configure-pages@v4
 
-      - name: Download amd64 build artifacts
+      - name: Download build artifacts
         uses: actions/download-artifact@v4
         with:
-          name: builds-amd64
-          path: ~/builds/amd64/
-
-      - name: Download arm64 build artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: builds-arm64
-          path: ~/builds/arm64/
+          pattern: "builds-*"
+          path: ~/artifacts/
 
       - name: Publish release
-        uses: ghalactic/github-release-from-tag@v5
+        uses: ghalactic/github-release-from-tag@v6
         with:
           generateReleaseNotes: "true"
           assets: |
-            - path: ~/builds/*
+            - path: ~/artifacts/builds-*/*
 
       - name: Copy debs to current dir
         # workaround for scan-dir input of apt-repo-action not working
-        run: cp -v ~/builds/{amd64,arm64}/*.deb ./
+        run: cp -v ~/artifacts/builds-*/*.deb ./
 
       - uses: morph027/apt-repo-action@v2
         id: create-apt-repo
