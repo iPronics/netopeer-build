@@ -1,0 +1,86 @@
+name: publish_repo
+on:
+  push:
+    branches:
+      - main
+      - multiarch
+      - multiarch-repo
+  # also allow manual triggers.
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+env:
+  REPO_NAME: netopeer-deb
+  CODENAME: bookworm
+  COMPONENTS: main
+  ARCHITECTURES: amd64 arm64
+  RELEASE_RE: ".*"
+  FILE_GLOB: "*.deb"
+
+jobs:
+  create_repo:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      - name: Gather repo contents from releases
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir ./contents
+          releases= $(gh release list -R $GITHUB_REPOSITORY)
+          echo Selected releases: "$releases"
+          for r in $releases; do
+            if [[ "$r" =~ $RELEASE_RE ]]; then
+              echo Downloading $FILE_GLOB from $r
+              gh release download "$r" -p $FILE_GLOB -D ./contents -R $GITHUB_REPOSITORY
+            fi
+          done
+
+      - name: list contents
+        run: ls ./contents/
+
+      - uses: morph027/apt-repo-action@v3.7
+        id: create-apt-repo
+        with:
+          repo-name: ${{ env.REPO_NAME }}
+          signing-key: ${{ secrets.SIGNING_KEY }}
+          codename: ${{ env.CODENAME }}
+          components: ${{ env.COMPONENTS }}
+          architectures: ${{ env.ARCHITECTURES }}
+          scan-dir: ./contents/
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          name: github-pages
+          path: ${{ steps.create-apt-repo.outputs.dir }}
+
+  # #######################
+  # # Temporariy disable deploy to github pages to avoid breaking swtchd
+  # # workflows depending on pinned versions of libyang3
+  # deploy:
+  #   if: github.ref_type == 'tag'
+  #   environment:
+  #     name: github-pages
+  #     url: ${{ steps.deployment.outputs.page_url }}
+  #   runs-on: ubuntu-latest
+  #   needs: release
+  #   steps:
+  #     - name: Deploy to GitHub Pages
+  #       id: deployment
+  #       uses: actions/deploy-pages@v4
+
+  #     - name: Adding summary
+  #       run: |
+  #         echo ':rocket:' >> $GITHUB_STEP_SUMMARY
+  #         echo '' >> $GITHUB_STEP_SUMMARY
+  #         echo '```bash' >> $GITHUB_STEP_SUMMARY
+  #         echo 'curl -sfLo /etc/apt.trusted.gpg.d/${{ needs.build.outputs.keyring }}.asc ${{ steps.deploy-pages.outputs.page_url }}gpg.key' >> $GITHUB_STEP_SUMMARY
+  #         echo 'echo "deb ${{ steps.deploy-pages.outputs.page_url }} ${{ env.CODENAME }} ${{ env.COMPONENTS }}" >/etc/apt/sources.list.d/${{ env.REPO_NAME }}.list' >> $GITHUB_STEP_SUMMARY
+  #         echo '```' >> $GITHUB_STEP_SUMMARY
