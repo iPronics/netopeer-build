@@ -38,7 +38,7 @@ jobs:
           for r in $releases; do
             if [[ "$r" =~ $RELEASE_RE ]]; then
               echo Downloading $FILE_GLOB from $r
-              gh release download "$r" -p $FILE_GLOB -D ./contents -R $GITHUB_REPOSITORY || true
+              gh release download "$r" -p $FILE_GLOB -D ./contents -R $GITHUB_REPOSITORY --skip-existing || true
             fi
           done
 
