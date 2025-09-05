@@ -33,7 +33,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           mkdir ./contents
-          releases= $(gh release list -R $GITHUB_REPOSITORY)
+          releases=$(gh release list -R $GITHUB_REPOSITORY)
           echo Selected releases: "$releases"
           for r in $releases; do
             if [[ "$r" =~ $RELEASE_RE ]]; then
