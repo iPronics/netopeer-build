@@ -2,8 +2,8 @@ name: build_debs
 on:
   push:
     branches:
-      - main
-      - multiarch
+      - "main"
+      - "test/**"
     tags:
       - "*"
 
