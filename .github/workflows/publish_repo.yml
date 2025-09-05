@@ -1,11 +1,9 @@
 name: publish_repo
 on:
-  push:
-    branches:
-      - main
-      - multiarch
-      - multiarch-repo
-  # also allow manual triggers.
+  # new releases (including those created when the build_debs workflow is triggered by a tag)
+  release:
+    types: [published]
+  # manual trigger.
   workflow_dispatch:
 
 permissions:
@@ -61,26 +59,13 @@ jobs:
           name: github-pages
           path: ${{ steps.create-apt-repo.outputs.dir }}
 
-  # #######################
-  # # Temporariy disable deploy to github pages to avoid breaking swtchd
-  # # workflows depending on pinned versions of libyang3
-  # deploy:
-  #   if: github.ref_type == 'tag'
-  #   environment:
-  #     name: github-pages
-  #     url: ${{ steps.deployment.outputs.page_url }}
-  #   runs-on: ubuntu-latest
-  #   needs: release
-  #   steps:
-  #     - name: Deploy to GitHub Pages
-  #       id: deployment
-  #       uses: actions/deploy-pages@v4
-
-  #     - name: Adding summary
-  #       run: |
-  #         echo ':rocket:' >> $GITHUB_STEP_SUMMARY
-  #         echo '' >> $GITHUB_STEP_SUMMARY
-  #         echo '```bash' >> $GITHUB_STEP_SUMMARY
-  #         echo 'curl -sfLo /etc/apt.trusted.gpg.d/${{ needs.build.outputs.keyring }}.asc ${{ steps.deploy-pages.outputs.page_url }}gpg.key' >> $GITHUB_STEP_SUMMARY
-  #         echo 'echo "deb ${{ steps.deploy-pages.outputs.page_url }} ${{ env.CODENAME }} ${{ env.COMPONENTS }}" >/etc/apt/sources.list.d/${{ env.REPO_NAME }}.list' >> $GITHUB_STEP_SUMMARY
-  #         echo '```' >> $GITHUB_STEP_SUMMARY
+  deploy_repo:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: create_repo
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
