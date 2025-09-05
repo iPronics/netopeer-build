@@ -152,14 +152,14 @@ jobs:
           generateReleaseNotes: "true"
           assets: |
             - path: ~/artifacts/builds-*/*
-      # since the release is created using a the GITHUB_TOKEN, it will not trigger
+      # since the release is created using the GITHUB_TOKEN, it will not trigger
       # the publish_repo workflow (even if it is configured to be triggered by
       # when a release is published). See:
       # https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow#triggering-a-workflow-from-a-workflow
       # Therefore, as a workaround we explicitly
       # trigger it using the gh CLI in the following step.
       # Note: for this to work, the publish_repo workflow must have been run at
-      # least once:
+      # least once: gh workflow run workflow-name --ref branch-name
       - name: Trigger the publish_repo workflow
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
