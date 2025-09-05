@@ -2,23 +2,13 @@ name: build_debs
 on:
   push:
     branches:
-      - main
+      - "main"
+      - "test/**"
     tags:
       - "*"
 
-permissions:
-  contents: write
-  pages: write
-  id-token: write
-
-env:
-  REPO_NAME: netopeer-deb
-  CODENAME: bookworm
-  COMPONENTS: main
-  ARCHITECTURES: amd64
-
 jobs:
-  build:
+  build-amd64:
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/astral-sh/uv:bookworm-slim
@@ -53,16 +43,16 @@ jobs:
         run: |
           git config --global http.sslVerify false 
           cd ~
-          git clone --depth=1 https://github.com/CESNET/libyang  
-          git clone --depth=1 https://github.com/CESNET/libnetconf2.git  
-          git clone --depth=1 https://github.com/sysrepo/sysrepo.git  
-          git clone --depth=1 https://github.com/CESNET/Netopeer2.git 
+          git clone https://github.com/CESNET/libyang  
+          git clone https://github.com/CESNET/libnetconf2.git  
+          git clone https://github.com/sysrepo/sysrepo.git  
+          git clone https://github.com/CESNET/Netopeer2.git 
           sed -i 's/-DCMAKE_BUILD_TYPE/-DENABLE_TLS=ON -DENABLE_SSH=ON -DCMAKE_BUILD_TYPE/g' \
              ~/libnetconf2/distro/pkg/deb/rules
 
       - name: build libyang
         run: |
-          cd ~/libyang && uv tool run apkg build 
+          cd ~/libyang && uv tool run apkg build
           apt-get install -y ~/libyang/pkg/pkgs/debian-12/libyang*/*.deb
 
       - name: build libnetconf2
@@ -87,78 +77,90 @@ jobs:
       - name: Collect all builds
         run: |
           mkdir -p ~/builds && cp ~/*/pkg/pkgs/debian-12/*/* ~/wheels/*.whl ~/builds/
-          # also include a tgz with everything
-          cd ~ && tar -cvzf ~/builds.tgz builds/ && mv ~/builds.tgz ~/builds/
 
       - name: Upload builds as artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: builds
+          name: builds-amd64
+          path: ~/builds/
+          retention-days: 7
+
+  build-arm64:
+    runs-on: ubuntu-24.04-arm
+    container:
+      image: ghcr.io/astral-sh/uv:bookworm-slim
+    outputs:
+      artifact_id: ${{ steps.upload-artifact.outputs.artifact-id }}
+      keyring: ${{ steps.create-apt-repo.outputs.keyring }}
+    steps:
+      - name: Install apkg
+        run: uv tool install apkg
+      - name: Install build deps
+        run: |
+          apt-get update && apt-get install -y --no-install-recommends \
+            git \
+            build-essential \
+            libcmocka-dev \
+            libpcre2-dev \
+            pkg-config \
+            cmake \
+            debhelper
+
+      - name: download sources
+        run: |
+          git config --global http.sslVerify false 
+          cd ~
+          git clone https://github.com/CESNET/libyang
+
+      - name: build libyang
+        run: |
+          cd ~/libyang && uv tool run apkg build 
+          apt-get install -y ~/libyang/pkg/pkgs/debian-12/libyang*/*.deb
+
+      - name: build libyang wheel
+        run: |
+          mkdir -p ~/wheels && cd ~/wheels && uvx -p 3.11 pip wheel libyang
+
+      - name: Collect all builds
+        run: |
+          mkdir -p ~/builds && cp ~/*/pkg/pkgs/debian-12/*/* ~/wheels/*.whl ~/builds/
+
+      - name: Upload builds as artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: builds-arm64
           path: ~/builds/
           retention-days: 7
 
   release:
     if: github.ref_type == 'tag'
-    needs: build
+    needs: [build-amd64, build-arm64]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v3
 
-      - name: Setup Pages
-        uses: actions/configure-pages@v4
-
-      - name: Download builds artifact
+      - name: Download build artifacts
         uses: actions/download-artifact@v4
         with:
-          name: builds
-          path: ~/builds/
+          pattern: "builds-*"
+          path: ~/artifacts/
 
       - name: Publish release
-        uses: ghalactic/github-release-from-tag@v5
+        uses: ghalactic/github-release-from-tag@v6
         with:
           generateReleaseNotes: "true"
           assets: |
-            - path: ~/builds/*
-
-      - name: Copy debs to current dir
-        # workaround for scan-dir input of apt-repo-action not working
-        run: cp -v ~/builds/*.deb ./
-
-      - uses: morph027/apt-repo-action@v2
-        id: create-apt-repo
-        with:
-          repo-name: ${{ env.REPO_NAME }}
-          signing-key: ${{ secrets.SIGNING_KEY }}
-          codename: ${{ env.CODENAME }}
-          components: ${{ env.COMPONENTS }}
-          architectures: ${{ env.ARCHITECTURES }}
-          # import-from-repo-url: |
-          #   deb-amd64 https://cpascual.github.io/${{ env.REPO_NAME }}/ ${{ env.CODENAME }} ${{ env.COMPONENTS }}
-
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          name: github-pages
-          path: ${{ steps.create-apt-repo.outputs.dir }}
-
-  deploy:
-    if: github.ref_type == 'tag'
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
-    needs: release
-    steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
-
-      - name: Adding summary
-        run: |
-          echo ':rocket:' >> $GITHUB_STEP_SUMMARY
-          echo '' >> $GITHUB_STEP_SUMMARY
-          echo '```bash' >> $GITHUB_STEP_SUMMARY
-          echo 'curl -sfLo /etc/apt.trusted.gpg.d/${{ needs.build.outputs.keyring }}.asc ${{ steps.deploy-pages.outputs.page_url }}gpg.key' >> $GITHUB_STEP_SUMMARY
-          echo 'echo "deb ${{ steps.deploy-pages.outputs.page_url }} ${{ env.CODENAME }} ${{ env.COMPONENTS }}" >/etc/apt/sources.list.d/${{ env.REPO_NAME }}.list' >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
+            - path: ~/artifacts/builds-*/*
+      # since the release is created using the GITHUB_TOKEN, it will not trigger
+      # the publish_repo workflow (even if it is configured to be triggered by
+      # when a release is published). See:
+      # https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow#triggering-a-workflow-from-a-workflow
+      # Therefore, as a workaround we explicitly
+      # trigger it using the gh CLI in the following step.
+      # Note: for this to work, the publish_repo workflow must have been run at
+      # least once: gh workflow run workflow-name --ref branch-name
+      - name: Trigger the publish_repo workflow
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh workflow run publish_repo --ref $GITHUB_REF_NAME -R $GITHUB_REPOSITORY

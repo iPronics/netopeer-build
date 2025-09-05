@@ -12,7 +12,7 @@ You can add the repo with:
 
 ```console
 wget https://iPronics.github.io/netopeer-build/gpg.key -O- | sudo tee /etc/apt/trusted.gpg.d/netopeer-deb.asc
-echo 'deb [arch=amd64] https://iPronics.github.io/netopeer-build/ bookworm main' | sudo tee /etc/apt/sources.list.d/netopeer-deb.list
+echo "deb [arch=$(dpkg --print-architecture)] https://iPronics.github.io/netopeer-build/ bookworm main" | sudo tee /etc/apt/sources.list.d/netopeer-deb.list
 ```
 
 ...and then install packages with e.g.:
