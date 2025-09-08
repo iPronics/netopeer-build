@@ -52,12 +52,18 @@ jobs:
           git config --global http.sslVerify false 
           cd ~
           git clone https://github.com/CESNET/libyang  
-          git clone https://github.com/CESNET/libnetconf2.git 
-          # Workaround until the bugfix of #sysrepo/3670 lands on sysrepo's master
-          git clone https://github.com/cpascual/sysrepo.git  --branch bugfix-3670
+          git clone https://github.com/CESNET/libnetconf2.git  
+          git clone https://github.com/sysrepo/sysrepo.git  
           git clone https://github.com/CESNET/Netopeer2.git 
           sed -i 's/-DCMAKE_BUILD_TYPE/-DENABLE_TLS=ON -DENABLE_SSH=ON -DCMAKE_BUILD_TYPE/g' \
              ~/libnetconf2/distro/pkg/deb/rules
+          # workaround until https://github.com/sysrepo/sysrepo/issues/3670 reaches master
+          sed -i 's/x86_64-linux-gnu/*/g' ~/sysrepo/distro/pkg/deb/libsysrepo7.install
+          sed -i 's/x86_64-linux-gnu/*/g' ~/sysrepo/distro/pkg/deb/sysrepo-tools.install
+          cd ~/sysrepo/
+          git config user.email "bot@ipronics.com"
+          git config user.name "Bot"
+          git commit -a -m "Patch for https://github.com/sysrepo/sysrepo/issues/3670"
 
       - name: build libyang
         run: |
