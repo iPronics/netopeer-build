@@ -59,6 +59,8 @@ jobs:
              ~/libnetconf2/distro/pkg/deb/rules
           # workaround until https://github.com/sysrepo/sysrepo/issues/3670 reaches master
           sed -i 's/x86_64-linux-gnu/*/g' ~/sysrepo/distro/pkg/deb/libsysrepo7.install
+          cd ~/sysrepo/
+          git commit -a -m "Patch for https://github.com/sysrepo/sysrepo/issues/3670"
 
       - name: build libyang
         run: |
