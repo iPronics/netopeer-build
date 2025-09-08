@@ -60,7 +60,9 @@ jobs:
           # workaround until https://github.com/sysrepo/sysrepo/issues/3670 reaches master
           sed -i 's/x86_64-linux-gnu/*/g' ~/sysrepo/distro/pkg/deb/libsysrepo7.install
           cd ~/sysrepo/
-          git commit -a -m "Patch for https://github.com/sysrepo/sysrepo/issues/3670" --author="bot <nobody@ipronics.com>"
+          git config user.email "bot@ipronics.com"
+          git config user.name "Bot"
+          git commit -a -m "Patch for https://github.com/sysrepo/sysrepo/issues/3670"
       - name: build libyang
         run: |
           cd ~/libyang && uv tool run apkg build
