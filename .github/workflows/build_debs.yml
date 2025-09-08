@@ -57,6 +57,8 @@ jobs:
           git clone https://github.com/CESNET/Netopeer2.git 
           sed -i 's/-DCMAKE_BUILD_TYPE/-DENABLE_TLS=ON -DENABLE_SSH=ON -DCMAKE_BUILD_TYPE/g' \
              ~/libnetconf2/distro/pkg/deb/rules
+          # workaround until https://github.com/sysrepo/sysrepo/issues/3670 reaches master
+          sed -i 's/x86_64-linux-gnu/*/g' ~/lisysrepo/distro/pkg/deb/libsysrepo7.install
 
       - name: build libyang
         run: |
