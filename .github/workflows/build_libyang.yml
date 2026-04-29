@@ -1,0 +1,105 @@
+name: build_libyang
+on:
+  push:
+    branches:
+      - "main"
+      - "test/**"
+    tags:
+      - "*"
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: "ubuntu-latest"
+            arch: "amd64"
+          - os: "ubuntu-24.04-arm"
+            arch: "arm64"
+
+    runs-on: ${{ matrix.os }}
+    container:
+      image: ghcr.io/astral-sh/uv:bookworm-slim
+    outputs:
+      artifact_id: ${{ steps.upload-artifact.outputs.artifact-id }}
+      keyring: ${{ steps.create-apt-repo.outputs.keyring }}
+    steps:
+      - name: Install apkg
+        run: uv tool install apkg
+      - name: Install build deps
+        run: |
+          apt-get update && apt-get install -y --no-install-recommends \
+            git \
+            build-essential \
+            libcmocka-dev \
+            libpcre2-dev \
+            pkg-config \
+            cmake \
+            debhelper \
+            libssl-dev \
+            libssh-dev \
+            libpam0g-dev \
+            libcurl4-openssl-dev \
+            libsystemd-dev \
+            valgrind \
+            libsystemd-dev \
+            systemd
+
+      - name: download sources
+        run: |
+          git config --global http.sslVerify false 
+          cd ~
+          git clone https://github.com/CESNET/libyang  --branch v3.12.2
+
+      - name: build libyang
+        run: |
+          cd ~/libyang && uv tool run apkg build
+          apt-get install -y ~/libyang/pkg/pkgs/debian-12/libyang*/*.deb
+
+      - name: build libyang wheels
+        run: |
+          mkdir -p ~/wheels && cd ~/wheels && uvx -p 3.11 pip wheel libyang==3 && uvx -p 3.14 pip wheel "libyang==3"
+
+      - name: Collect all builds
+        run: |
+          mkdir -p ~/builds && cp -v ~/*/pkg/pkgs/debian-12/*/* ~/wheels/*.whl ~/builds/
+
+      - name: Upload builds as artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: builds-${{ matrix.arch }}
+          path: ~/builds/
+          retention-days: 7
+
+  release:
+    if: github.ref_type == 'tag'
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: "builds-*"
+          path: ~/artifacts/
+
+      - name: Publish release
+        uses: ghalactic/github-release-from-tag@v6
+        with:
+          generateReleaseNotes: "true"
+          assets: |
+            - path: ~/artifacts/builds-*/*
+      # since the release is created using the GITHUB_TOKEN, it will not trigger
+      # the publish_repo workflow (even if it is configured to be triggered by
+      # when a release is published). See:
+      # https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow#triggering-a-workflow-from-a-workflow
+      # Therefore, as a workaround we explicitly
+      # trigger it using the gh CLI in the following step.
+      # Note: for this to work, the publish_repo workflow must have been run at
+      # least once: gh workflow run workflow-name --ref branch-name
+      - name: Trigger the publish_repo workflow
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh workflow run publish_repo --ref $GITHUB_REF_NAME -R $GITHUB_REPOSITORY
