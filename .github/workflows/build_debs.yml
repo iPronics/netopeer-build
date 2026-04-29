@@ -87,7 +87,7 @@ jobs:
 
       - name: build libyang and sysrepo wheels
         run: |
-          mkdir -p ~/wheels && cd ~/wheels && uvx -p 3.11 pip wheel sysrepo
+          mkdir -p ~/wheels && cd ~/wheels && uvx -p 3.11 pip wheel sysrepo && uvx -p 3.14 pip wheel sysrepo
 
       - name: Collect all builds
         run: |
